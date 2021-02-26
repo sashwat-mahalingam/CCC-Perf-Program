@@ -10,8 +10,8 @@ ccc_index_dict = {headers[i]: i for i in range(len(headers))}
 
 # Lists for the performer objects, the output list, and declined list
 ccc_performers = []
-ccc_outputs = [['Name: ', 'Teacher: ', 'Month: ', 'Timeslot: ', 'Attendance: ', 'Comments: ']]
-ccc_declined = [['Name: ', 'Teacher: ', 'Requested Months: ', 'Last Month: ', 'Requested Timeslot: ','Last Timeslot: ', 'Attendance: ', 'Comments: ']]
+ccc_outputs = [['Name: ', 'Teacher: ', 'Month: ', 'Timeslot: ', 'Attendance: ', 'Eligibility: ']]
+ccc_declined = [['Name: ', 'Teacher: ', 'Requested Months: ', 'Requested Timeslot: ', 'Eligibility: ', 'Attendance: ', 'Comments: ']]
 
 # Read in excepted schools to the "1 per school" limit
 ccc_school_excepts_df = pandas.read_excel(io = "Database.xlsx", sheet_name = "School Exceptions")
@@ -99,24 +99,15 @@ class Performer:
             self.declined = False
             self.set_month_and_time()
     
-    # NOT an instance method!!
-    def validate_month(month):
-        """Validates the month as being planned."""
-        return month in Performer.planned_months
-
-    def validate_time(self):
-        """Validates timeslot for student to perform in."""
-        return True
-    
     def month_slot_available(self, month):
         """Checks whether month has the appropriate slot."""
-        return Performer.validate_month(month) and MonthTime.available(month, self.req_time)
+        return MonthTime.available(month, self.req_time)
     
     def month_school_limit(self, month):
         """Checks whether the number of students in one school
         for a given month does not exceed limit.
         Note: Limit can be the standard, or non-standard if the school is in exceptions dictionary."""
-        return Performer.validate_month(month) and Performer.schools_per_month[month].get(self.school, 0) < Performer.school_dict.get(self.school, Performer.SCHOOL_LIMIT)
+        return Performer.schools_per_month[month].get(self.school, 0) < Performer.school_dict.get(self.school, Performer.SCHOOL_LIMIT)
     
     def set_month_and_time(self):
         """Modify the appropriate records for school and timeslot in the chosen month."""
@@ -131,24 +122,20 @@ class Performer:
         # Record final results
         self.this_month, self.this_time = month, self.req_time
 
-        # Note new performers for convenience
-        if self.new:
-            self.comments = "New"
-
 # Create performers from list of data and do assignment
 for p in ccc_df_list:
     if not pandas.isnull(p[0]):
         pname, pschool = p[ccc_index_dict['Name: ']], p[ccc_index_dict['Teacher: ']]
-        plast_month, plast_time = p[ccc_index_dict['Month performed last year: ']], p[ccc_index_dict['Last duration: ']]
         pmonth1, pmonth2 = p[ccc_index_dict["First choice: "]], p[ccc_index_dict['Second choice: ']]
         preq_time = p[ccc_index_dict['Requested time: ']]
         pattendance = p[ccc_index_dict['Attendance: ']]
+        peligibility = p[ccc_index_dict["Eligibility"]]
 
-        pf = Performer(name = pname, school = pschool, last_month = plast_month, last_time = plast_time, month1 = pmonth1, month2 = pmonth2, req_time = preq_time, attendance = pattendance)
+        pf = Performer(name = pname, school = pschool, month1 = pmonth1, month2 = pmonth2, req_time = preq_time, attendance = pattendance, eligibility = peligibility)
         ccc_performers.append(pf)
 
 # Sort from most to least attendance
-ccc_performers.sort(key = lambda p: p.attendance if type(p.attendance) == int else -1, reverse = True)
+ccc_performers.sort(key = lambda p: p.attendance, reverse = True)
 
 ccc_month_output = {}
 
@@ -161,9 +148,9 @@ for p in ccc_performers:
 
     # Sort into declined and accepted, record into month tables
     if p.declined:
-        ccc_declined.append([p.name, p.school, p.month1 + ", " + p.month2, p.last_month, p.req_time, p.last_time, p.attendance, p.comments])
+        ccc_declined.append([p.name, p.school, p.month1 + ", " + p.month2, p.req_time, p.eligibility, p.attendance, p.comments])
     else:
-        output_lst = [p.name, p.school, p.this_month, p.this_time, p.attendance, p.comments]
+        output_lst = [p.name, p.school, p.this_month, p.this_time, p.attendance, p.eligibility]
         ccc_outputs.append(output_lst)
         ccc_month_output[p.this_month].append(output_lst[0:2] + output_lst[3:])
 
