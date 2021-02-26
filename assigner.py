@@ -53,7 +53,8 @@ class Performer:
     times = [range(5,10), range(10,15), range(15,20), range(20, 30), range(30,40)]
 
     # Who can perform, then what months available
-    eligible_months = ['January', 'February', 'March', 'April', 'May', 'June', 'None']
+    # eligible_months = ['January', 'February', 'March', 'April', 'May', 'June', 'None']
+    ineligibility_code = "NS"
     planned_months = ['February', 'March', 'April', 'May', 'June']
 
     # Limits and exceptions
@@ -65,39 +66,30 @@ class Performer:
     for m in planned_months:
         MonthTime(m)
     
-    def __init__(self, name, school, last_month, last_time, month1, month2, req_time, attendance):
+    def __init__(self, name, school, eligibility, month1, month2, req_time, attendance):
         """Initialize performer with the appropriate attributes.
         Includes keeping track of eligibility, timeslot, comments, etc. 
         """
         # Set attributes
         self.name, self.school, self.attendance = name, school, attendance
-        self.last_month = last_month
         self.month1, self.month2 = month1, month2
-        self.last_time, self.req_time = last_time, req_time
+        self.req_time = req_time
+        self.eligibility = eligibility
         self.comments = ""
-
-        # If the performer is new, note it
-        if last_time == "None":
-            self.new = True
-        else:
-            self.new = False
  
     def assign(self):
         """Assigns slot if validated, else declines. Only for new performers."""
         m1, m2 = self.month1, self.month2 # months for easy reference
         msl, msa = self.month_school_limit, self.month_slot_available 
-        vm = Performer.validate_month # some bound methods for easy reference
 
         # All reasons that this doesn't work, in order
         self.declined = True
-        if type(self.attendance) != int:
-            self.comments = "Could not find attendance records"
-        elif not self.validate_half():
-            self.comments = "The performer cannot perform in this half as they performed in " + self.last_month + " last year"
-        elif not self.validate_time():
-            self.comments = "Timeslot: " + str(self.req_time) + " minutes is not a permissible selection, given the last slot was " + str(self.last_time) + (" minutes" if not self.new else "")
-        elif not (vm(m1) or vm(m2)):
-            self.comments = "Neither " + m1 + " nor " + m2 + " is planned to occur this year" 
+       # if type(self.attendance) != int:
+       #     self.comments = "Could not find attendance records"
+        if self.eligibility == Performer.ineligibility_code:
+            self.comments = "The performer's ability to perform in this half is uncertain"
+        #elif not self.validate_time():
+        #    self.comments = "Timeslot: " + str(self.req_time) + " minutes is not a permissible selection, given the last slot was " + str(self.last_time) + (" minutes" if not self.new else "") 
         elif not (msl(m1) or msl(m2)):
             self.comments = "For months " + m1 + " and " + m2 + ", the school limit for " + self.school + " is reached"
         elif not (msa(m1) or msa(m2)):
@@ -106,12 +98,6 @@ class Performer:
             # Success!
             self.declined = False
             self.set_month_and_time()
-            if self.new:
-                self.comments = "New"
-
-    def validate_half(self):
-        """Validates performer doing a certain half of the year."""
-        return self.last_month == "None" or self.last_month in Performer.eligible_months
     
     # NOT an instance method!!
     def validate_month(month):
@@ -121,15 +107,6 @@ class Performer:
     def validate_time(self):
         """Validates timeslot for student to perform in."""
         return True
-        # if self.new:
-         #   return self.req_time <= 10
-        #for i in range(len(Performer.times)):
-            # Find where the last timeslot exists, note all possible future times
-         #   if self.last_time in Performer.times[i]:
-          #      available_range = range(min(Performer.times[i+1]) + 1)
-
-        # Return if request is in possible future times
-       # return self.req_time in available_range
     
     def month_slot_available(self, month):
         """Checks whether month has the appropriate slot."""
