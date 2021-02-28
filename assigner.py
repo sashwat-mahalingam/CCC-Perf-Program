@@ -89,7 +89,7 @@ class Performer:
                 self.comments.append("The performer's ability to perform in this half is uncertain")
                 self.declined = True
                 return
-            elif month == None:
+            elif month == "None":
                 self.comments.append("Didn't have a request, so deferring to manual assignment")
             elif month not in Performer.planned_months:
                 self.comments.append(month + " is not a valid request")
