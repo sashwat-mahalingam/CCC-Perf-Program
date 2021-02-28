@@ -44,6 +44,10 @@ class MonthTime:
         # Decrease total time and slots available
         m.time -= req
         m.times_available[req] -= 1
+    
+    def validate(month):
+        """Validate that the month exists (used to decline month requests with 'None')."""
+        return month in Month.months.keys()
 
 class Performer:
     """A class for representing a performer and timeslot."""
@@ -75,7 +79,7 @@ class Performer:
         self.month1, self.month2 = month1, month2
         self.req_time = req_time
         self.eligibility = eligibility
-        self.comments = ""
+        self.comments = []
  
     def assign(self):
         """Assigns slot if validated, else declines. Only for new performers."""
@@ -84,12 +88,9 @@ class Performer:
 
         # All reasons that this doesn't work, in order
         self.declined = True
-       # if type(self.attendance) != int:
-       #     self.comments = "Could not find attendance records"
+
         if self.eligibility == Performer.ineligibility_code:
             self.comments = "The performer's ability to perform in this half is uncertain"
-        #elif not self.validate_time():
-        #    self.comments = "Timeslot: " + str(self.req_time) + " minutes is not a permissible selection, given the last slot was " + str(self.last_time) + (" minutes" if not self.new else "") 
         elif not (msl(m1) or msl(m2)):
             self.comments = "For months " + m1 + " and " + m2 + ", the school limit for " + self.school + " is reached"
         elif not (msa(m1) or msa(m2)):
