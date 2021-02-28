@@ -11,7 +11,7 @@ ccc_index_dict = {headers[i]: i for i in range(len(headers))}
 # Lists for the performer objects, the output list, and declined list
 ccc_performers = []
 ccc_outputs = [['Name: ', 'Teacher: ', 'Month: ', 'Timeslot: ', 'Attendance: ', 'Eligibility: ']]
-ccc_declined = [['Name: ', 'Teacher: ', 'Requested Months: ', 'Requested Timeslot: ', 'Eligibility: ', 'Attendance: ', 'Comments: ']]
+ccc_declined = [['Name: ', 'Teacher: ', 'Requested Month: ', 'Requested Timeslot: ', 'Eligibility: ', 'Attendance: ', 'Comment: ']]
 
 # Read in excepted schools to the "1 per school" limit
 ccc_school_excepts_df = pandas.read_excel(io = "Database.xlsx", sheet_name = "School Exceptions")
@@ -44,10 +44,6 @@ class MonthTime:
         # Decrease total time and slots available
         m.time -= req
         m.times_available[req] -= 1
-    
-    def validate(month):
-        """Validate that the month exists (used to decline month requests with 'None')."""
-        return month in Month.months.keys()
 
 class Performer:
     """A class for representing a performer and timeslot."""
@@ -82,24 +78,32 @@ class Performer:
         self.comments = []
  
     def assign(self):
-        """Assigns slot if validated, else declines. Only for new performers."""
-        m1, m2 = self.month1, self.month2 # months for easy reference
-        msl, msa = self.month_school_limit, self.month_slot_available 
+        """Assigns slot if validated, else declines."""
+
+        msl, msa = self.month_school_limit, self.month_slot_available
+        self.declined = False
 
         # All reasons that this doesn't work, in order
+        for month in self.month1, self.month2:
+            if self.eligibility == Performer.ineligibility_code:
+                self.comments.append("The performer's ability to perform in this half is uncertain")
+                self.declined = True
+                return
+            elif month == None:
+                self.comments.append("Didn't have a request, so deferring to manual assignment")
+            elif month not in Performer.planned_months:
+                self.comments.append(month + " is not a valid request")
+            elif not msl(month):
+                self.comments.append("For " + month + ", the school limit for " + self.school + " is reached")
+            elif not msa(month):
+                self.comments.append("For  " + month + ", the " + str(self.req_time) + "-minute slot is unavailable")
+            else:
+                # Success!
+                self.set_month_and_time(month)
+                return
+        
         self.declined = True
 
-        if self.eligibility == Performer.ineligibility_code:
-            self.comments = "The performer's ability to perform in this half is uncertain"
-        elif not (msl(m1) or msl(m2)):
-            self.comments = "For months " + m1 + " and " + m2 + ", the school limit for " + self.school + " is reached"
-        elif not (msa(m1) or msa(m2)):
-            self.comments = "For months " + m1 + " and " + m2 + ", the " + str(self.req_time) + "-minute slot is unavailable"
-        else:
-            # Success!
-            self.declined = False
-            self.set_month_and_time()
-    
     def month_slot_available(self, month):
         """Checks whether month has the appropriate slot."""
         return MonthTime.available(month, self.req_time)
@@ -110,14 +114,11 @@ class Performer:
         Note: Limit can be the standard, or non-standard if the school is in exceptions dictionary."""
         return Performer.schools_per_month[month].get(self.school, 0) < Performer.school_dict.get(self.school, Performer.SCHOOL_LIMIT)
     
-    def set_month_and_time(self):
+    def set_month_and_time(self, month):
         """Modify the appropriate records for school and timeslot in the chosen month."""
-        m1, m2 = self.month1, self.month2 # easy reference
-        msa, msl = self.month_slot_available, self.month_school_limit # again, easy reference
 
-        # Choose the working month and do the magic
-        month = m1 if msl(m1) and msa(m1) else m2
         Performer.schools_per_month[month][self.school] = Performer.schools_per_month[month].get(self.school, 0) + 1
+
         MonthTime.mod(month, self.req_time)
 
         # Record final results
@@ -149,7 +150,8 @@ for p in ccc_performers:
 
     # Sort into declined and accepted, record into month tables
     if p.declined:
-        ccc_declined.append([p.name, p.school, p.month1 + ", " + p.month2, p.req_time, p.eligibility, p.attendance, p.comments])
+        for m, c in zip((p.month1, p.month2), p.comments * 2):
+            ccc_declined.append([p.name, p.school, m, p.req_time, p.eligibility, p.attendance, c])
     else:
         output_lst = [p.name, p.school, p.this_month, p.this_time, p.attendance, p.eligibility]
         ccc_outputs.append(output_lst)
