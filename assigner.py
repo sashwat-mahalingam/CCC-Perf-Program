@@ -144,6 +144,8 @@ ccc_month_output = {}
 for month in Performer.planned_months:
     ccc_month_output[month] = []
 
+count_assigned, count_declined = 0, 0
+
 # Do assignment
 for p in ccc_performers:
     p.assign()
@@ -152,14 +154,23 @@ for p in ccc_performers:
     if p.declined:
         for m, c in zip((p.month1, p.month2), p.comments * 2):
             ccc_declined.append([p.name, p.school, m, p.req_time, p.eligibility, p.attendance, c])
+            count_declined += 1
     else:
         output_lst = [p.name, p.school, p.this_month, p.this_time, p.attendance, p.eligibility]
         ccc_outputs.append(output_lst)
         ccc_month_output[p.this_month].append(output_lst[0:2] + output_lst[3:])
+        count_assigned += 1
 
-# Write to DataFrame
-ccc_outputs_df = pandas.DataFrame(ccc_outputs[1:], columns = ccc_outputs[0])
-ccc_declined_df = pandas.DataFrame(ccc_declined[1:], columns = ccc_declined[0])
+# Add blank row and final counts
+ccc_outputs.append([""] * len(ccc_outputs[0]))
+ccc_outputs.append(['Count: ' + str(count_assigned)] + [""] * len(ccc_outputs[0] - 1))
+
+ccc_declined.append([""] * len(ccc_declined[0]))
+ccc_declined.append(['Count: ' + str(count_declined)] + [""] * len(ccc_declined[0] - 1))
+
+# Write to data frames
+ccc_outputs_df = pandas.DataFrame(ccc_outputs, columns = ccc_outputs[0])
+ccc_declined_df = pandas.DataFrame(ccc_declined, columns = ccc_declined[0])
 
 # Set up Excel sheet and format
 xlwriter = pandas.ExcelWriter('Output.xlsx', engine = 'xlsxwriter')
