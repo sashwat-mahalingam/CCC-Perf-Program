@@ -8,6 +8,9 @@ ccc_df_list = ccc_df.values.tolist()
 headers = list(ccc_df.columns)
 ccc_index_dict = {headers[i]: i for i in range(len(headers))}
 
+# Flexible performers being added to queue
+
+
 # Lists for the performer objects, the output list, and declined list
 ccc_performers = []
 ccc_outputs = [['Name: ', 'Teacher: ', 'Month: ', 'Timeslot: ', 'Attendance: ', 'Eligibility: ']]
@@ -161,7 +164,7 @@ for p in ccc_performers:
         ccc_month_output[p.this_month].append(output_lst[0:2] + output_lst[3:])
         count_assigned += 1
 
-# Add blank row and final counts
+# Add blank row and final counts to output/declined sheets
 ccc_outputs.append([""] * len(ccc_outputs[0]))
 ccc_outputs.append(['Count: ' + str(count_assigned)] + [""] * len(ccc_outputs[0] - 1))
 
