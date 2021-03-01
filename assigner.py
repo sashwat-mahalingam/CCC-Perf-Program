@@ -8,9 +8,6 @@ ccc_df_list = ccc_df.values.tolist()
 headers = list(ccc_df.columns)
 ccc_index_dict = {headers[i]: i for i in range(len(headers))}
 
-# Flexible performers being added to queue
-
-
 # Lists for the performer objects, the output list, and declined list
 ccc_performers = []
 ccc_outputs = [['Name: ', 'Teacher: ', 'Month: ', 'Timeslot: ', 'Attendance: ', 'Eligibility: ']]
@@ -69,6 +66,8 @@ class Performer:
     for m in planned_months:
         MonthTime(m)
     
+    flexibility_queue = []
+    
     def __init__(self, name, school, eligibility, month1, month2, req_time, attendance):
         """Initialize performer with the appropriate attributes.
         Includes keeping track of eligibility, timeslot, comments, etc. 
@@ -93,7 +92,8 @@ class Performer:
                 self.declined = True
                 return
             elif month == "None":
-                self.comments.append("Didn't have a request, so deferring to manual assignment")
+                Performer.flexibility_queue.append(self)
+                return
             elif month not in Performer.planned_months:
                 self.comments.append(month + " is not a valid request")
             elif not msl(month):
@@ -126,6 +126,20 @@ class Performer:
 
         # Record final results
         self.this_month, self.this_time = month, self.req_time
+    
+    def special_assign(self):
+        """Specially assigns performers who have no preference."""
+
+        # Iterate through each month and find something that works
+        for month in Performer.planned_months:
+            if self.month_school_limit(month) and self.month_slot_available(month):
+                self.declined = False
+                self.set_month_and_time(month)
+                return
+        
+        self.declined = True
+        self.comments.append("Performer had no preference and no months were logistically available")
+
 
 # Create performers from list of data and do assignment
 for p in ccc_df_list:
@@ -142,6 +156,7 @@ for p in ccc_df_list:
 # Sort from most to least attendance
 ccc_performers.sort(key = lambda p: p.attendance, reverse = True)
 
+# Set up month-based output dictionary and counts for declined/assigned performers
 ccc_month_output = {}
 
 for month in Performer.planned_months:
@@ -153,11 +168,17 @@ count_assigned, count_declined = 0, 0
 for p in ccc_performers:
     p.assign()
 
+# Do special assignment
+for p in Performer.flexibility_queue:
+    p.special_assign()
+
+# Record results
+for p in ccc_performers:
     # Sort into declined and accepted, record into month tables
     if p.declined:
         for m, c in zip((p.month1, p.month2), p.comments * 2):
             ccc_declined.append([p.name, p.school, m, p.req_time, p.eligibility, p.attendance, c])
-            count_declined += 1
+        count_declined += 1
     else:
         output_lst = [p.name, p.school, p.this_month, p.this_time, p.attendance, p.eligibility]
         ccc_outputs.append(output_lst)
@@ -166,14 +187,14 @@ for p in ccc_performers:
 
 # Add blank row and final counts to output/declined sheets
 ccc_outputs.append([""] * len(ccc_outputs[0]))
-ccc_outputs.append(['Count: ' + str(count_assigned)] + [""] * len(ccc_outputs[0] - 1))
+ccc_outputs.append(['Count: ' + str(count_assigned)] + [""] * (len(ccc_outputs[0]) - 1))
 
 ccc_declined.append([""] * len(ccc_declined[0]))
-ccc_declined.append(['Count: ' + str(count_declined)] + [""] * len(ccc_declined[0] - 1))
+ccc_declined.append(['Count: ' + str(count_declined)] + [""] * (len(ccc_declined[0]) - 1))
 
 # Write to data frames
-ccc_outputs_df = pandas.DataFrame(ccc_outputs, columns = ccc_outputs[0])
-ccc_declined_df = pandas.DataFrame(ccc_declined, columns = ccc_declined[0])
+ccc_outputs_df = pandas.DataFrame(ccc_outputs[1:], columns = ccc_outputs[0])
+ccc_declined_df = pandas.DataFrame(ccc_declined[1:], columns = ccc_declined[0])
 
 # Set up Excel sheet and format
 xlwriter = pandas.ExcelWriter('Output.xlsx', engine = 'xlsxwriter')
