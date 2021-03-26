@@ -17,6 +17,9 @@ ccc_declined = [['Name: ', 'Teacher: ', 'Requested Month: ', 'Requested Timeslot
 ccc_school_excepts_df = pandas.read_excel(io = "Database.xlsx", sheet_name = "School Exceptions")
 ccc_school_excepts = ccc_school_excepts_df.values.tolist()
 
+# Read in the months for this year
+planned_month_input = pandas.read_excel(io = "Database.xlsx", sheet_name = "Planned Months").values.tolist()
+
 class MonthTime:
     """To keep track of timings and the amount of available slots each month."""
     TIME_LIMIT, months = 155, {}
@@ -53,9 +56,8 @@ class Performer:
     times = [range(5,10), range(10,15), range(15,20), range(20, 30), range(30,40)]
 
     # Who can perform, then what months available
-    # eligible_months = ['January', 'February', 'March', 'April', 'May', 'June', 'None']
     ineligibility_code = "NS"
-    planned_months = ['February', 'March', 'April', 'May', 'June']
+    planned_months = [month[0] for month in planned_month_input]
 
     # Limits and exceptions
     SCHOOL_LIMIT, TIME_LIMIT = 1, 155
