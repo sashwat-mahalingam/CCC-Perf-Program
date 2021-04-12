@@ -101,7 +101,7 @@ class Performer:
             elif not msl(month):
                 self.comments.append("For " + month + ", the school limit for " + self.school + " is reached")
             elif not msa(month):
-                self.comments.append("For  " + month + ", the " + str(self.req_time) + "-minute slot is unavailable")
+                self.comments.append("For " + month + ", the " + str(self.req_time) + "-minute slot is unavailable")
             else:
                 # Success!
                 self.set_month_and_time(month)
