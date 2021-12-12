@@ -25,7 +25,9 @@ class MonthTime:
     TIME_LIMIT, months = 155, {}
 
     # Exception: 20 minute slots, anything >= 20 minutes can pretty much do RTP in the next slot
-    max_times = {5: 3, 10: 3, 15: 3, 20: 3, 25: 2, 30: 1}
+
+    # 15 : 4
+    max_times = {5: 3, 10: 4, 15: 5, 20: 3, 25: 2, 30: 1}
 
     def __init__(self, name):
         """Keep track of attributes, store month in list"""
